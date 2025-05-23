@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OTP Login</title>
+    <style>
+        body { margin: 0; padding: 0; font-family: Arial, sans-serif; }
+        #otpModal { 
+            position: fixed; 
+            top: 0; 
+            left: 0; 
+            width: 100%; 
+            height: 100%; 
+            background: rgba(0,0,0,0.8); 
+            z-index: 9999; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+        }
+        #otpForm { 
+            background: white; 
+            padding: 20px; 
+            border-radius: 5px; 
+            text-align: center; 
+            min-width: 300px; 
+        }
+        input { 
+            width: 90%; 
+            padding: 10px; 
+            margin: 10px 0; 
+            border: 1px solid #ccc; 
+            border-radius: 3px; 
+        }
+        button { 
+            background: #007bff; 
+            color: white; 
+            padding: 10px 20px; 
+            border: none; 
+            border-radius: 3px; 
+            cursor: pointer; 
+        }
+        button:hover { background: #0056b3; }
+        #error { color: red; margin: 10px 0; }
+        #budContent { display: none; width: 100%; height: 100vh; border: none; }
+    </style>
+</head>
+<body>
+    <div id="otpModal">
+        <div id="otpForm">
+            <h1>This is OTP Login</h1>
+            <h2>Enter OTP to Access</h2>
+            <input type="email" id="emailInput" placeholder="Enter your email" required>
+            <input type="text" id="otpInput" placeholder="Enter OTP" required maxlength="6">
+            <button onclick="verifyOTP()">Verify</button>
+            <div id="error"></div>
+        </div>
+    </div>
+    
+    <iframe id="budContent" src="home.html"></iframe>
+
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js';
+        import { getFirestore, doc, getDoc, deleteDoc } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js';
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyDPeNlcSpTe2oOySKcdfh9ykQzHVTDSwzk",
+            authDomain: "otp-gen-4d684.firebaseapp.com",
+            projectId: "otp-gen-4d684",
+            storageBucket: "otp-gen-4d684.firebasestorage.app",
+            messagingSenderId: "1092826485280",
+            appId: "1:1092826485280:web:1a2b5b38f002a793246245"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        window.verifyOTP = async function() {
+            const email = document.getElementById('emailInput').value.trim();
+            const otp = document.getElementById('otpInput').value.trim();
+            const errorDiv = document.getElementById('error');
+
+            if (!email || !otp) {
+                errorDiv.textContent = 'Please enter both email and OTP';
+                return;
+            }
+
+            try {
+                // Create document ID from email (replace @ and . with underscores)
+                const docId = email.replace('@', '_').replace(/\./g, '_');
+                const docRef = doc(db, 'otps', docId);
+                const docSnap = await getDoc(docRef);
+
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    
+                    // Check if OTP matches and is still valid (within 10 minutes)
+                    const now = new Date().getTime();
+                    const otpTime = data.timestamp;
+                    const timeDiff = now - otpTime;
+                    
+                    if (timeDiff > 600000) { // 10 minutes
+                        errorDiv.textContent = 'OTP has expired';
+                        await deleteDoc(docRef); // Delete expired OTP
+                        return;
+                    }
+                    
+                    if (data.otp === otp && data.email === email) {
+                        // OTP is correct, delete it to prevent reuse
+                        await deleteDoc(docRef);
+                        
+                        // Hide modal and show content
+                        document.getElementById('otpModal').style.display = 'none';
+                        document.getElementById('budContent').style.display = 'block';
+                        errorDiv.textContent = '';
+                    } else {
+                        errorDiv.textContent = 'Invalid OTP or email';
+                    }
+                } else {
+                    errorDiv.textContent = 'Invalid OTP or email';
+                }
+            } catch (error) {
+                console.error('Error verifying OTP:', error);
+                errorDiv.textContent = 'Error verifying OTP. Please try again.';
+            }
+        };
+
+        // Prevent closing modal with escape key
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                e.preventDefault();
+            }
+        });
+
+        // Prevent right-click context menu on modal
+        document.getElementById('otpModal').addEventListener('contextmenu', function(e) {
+            e.preventDefault();
+        });
+    </script>
+</body>
+</html>

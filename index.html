@@ -186,9 +186,8 @@
                                 document.getElementById('otpModal').style.display = 'none';
                                 document.getElementById('budContent').style.display = 'block';
                                 
-                                // Store access token in session (expires when browser closes)
-                                sessionStorage.setItem('budgetAccess', 'granted');
-                                sessionStorage.setItem('accessTime', now.toString());
+                                // Store access token in localStorage (permanent access)
+                                localStorage.setItem('budgetAccess', 'granted');
                                 
                             } catch (deleteError) {
                                 console.error('Error deleting used OTP:', deleteError);
@@ -237,22 +236,11 @@
 
         // Check if already authenticated (page refresh handling)
         window.addEventListener('load', function() {
-            const accessGranted = sessionStorage.getItem('budgetAccess');
-            const accessTime = sessionStorage.getItem('accessTime');
+            const accessGranted = localStorage.getItem('budgetAccess');
             
-            if (accessGranted === 'granted' && accessTime) {
-                const now = new Date().getTime();
-                const timeDiff = now - parseInt(accessTime);
-                
-                // Session expires after 1 hour
-                if (timeDiff < 3600000) {
-                    document.getElementById('otpModal').style.display = 'none';
-                    document.getElementById('budContent').style.display = 'block';
-                } else {
-                    // Clear expired session
-                    sessionStorage.removeItem('budgetAccess');
-                    sessionStorage.removeItem('accessTime');
-                }
+            if (accessGranted === 'granted') {
+                document.getElementById('otpModal').style.display = 'none';
+                document.getElementById('budContent').style.display = 'block';
             }
         });
 
